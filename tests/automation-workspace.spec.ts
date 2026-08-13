@@ -282,3 +282,85 @@ test('back-test folds split input/outcome lines into one row per item', async ({
   // The non-matching item is marked as not acted on
   await expect(rows.nth(2)).toContainText('No derivation');
 });
+
+// The composer floats over the conversation, so the message area's bottom padding
+// has to track its height — including while it grows with multi-line input
+const LONG_BACKTEST = `To run a back-test, here's what the configuration would have done:
+
+- INV-44712 · Acme Logistics Ltd, 2 bags of cement — 2 bags becomes 10 kg (2 x 5 kg)
+- INV-44713 · Northwind Traders, 3 bags of cement — 3 bags becomes 15 kg (3 x 5 kg)
+- INV-44714 · Globex Industrial, 1 bag of cement — 1 bag becomes 5 kg (1 x 5 kg)
+- INV-44715 · Acme Logistics Ltd, 4 bags of aggregate — no match, not cement
+- INV-44716 · Northwind Traders, 2 bags of sand — no match, not cement
+- INV-44717 · Acme Logistics Ltd, 6 bags of cement — 6 bags becomes 30 kg (6 x 5 kg)
+- INV-44718 · Globex Industrial, 8 bags of cement — 8 bags becomes 40 kg (8 x 5 kg)
+- INV-44719 · Northwind Traders, 12 bags of cement — 12 bags becomes 60 kg (12 x 5 kg)
+- INV-44720 · Acme Logistics Ltd, 3 bags of plaster — no match, not cement
+- INV-44721 · Globex Industrial, 5 bags of cement — 5 bags becomes 25 kg (5 x 5 kg)
+- INV-44722 · Northwind Traders, 9 bags of cement — 9 bags becomes 45 kg (9 x 5 kg)`;
+
+test('last message clears the composer, single and multi-line', async ({ page }) => {
+  await stub(page, [LONG_BACKTEST]);
+  await page.setViewportSize({ width: 1440, height: 620 });
+  await page.goto('/settings/automation');
+  const input = page.getByLabel('Message the Configuration Agent');
+  await input.fill('back-test it');
+  await input.press('Enter');
+  await expect(page.getByText('INV-44716 · Northwind Traders, 2 bags of sand')).toBeVisible({ timeout: 15000 });
+  await page.waitForTimeout(600);
+
+  const gap = async () => page.evaluate(() => {
+    const column = document.querySelector('[class*="messageColumn"]') as HTMLElement;
+    const last = column.lastElementChild!.getBoundingClientRect();
+    const composer = document.querySelector('[class*="composerPill"]')!.getBoundingClientRect();
+    return Math.round(composer.top - last.bottom);
+  });
+
+  // Confirm the conversation actually overflows, so this measures the sticky-bottom case
+  const overflows = await page.evaluate(() => {
+    const area = document.querySelector('[class*="messageArea"]') as HTMLElement;
+    return area.scrollHeight > area.clientHeight + 4;
+  });
+  expect(overflows).toBe(true);
+
+  const atRest = await gap();
+  console.log('gap at rest:', atRest);
+  expect(atRest).toBeGreaterThanOrEqual(16);
+  await page.screenshot({ path: 'test-results/gap-rest.png', clip: { x: 64, y: 260, width: 1376, height: 360 } });
+
+  // Growing the composer must not eat into that gap
+  await input.fill('one\ntwo\nthree\nfour\nfive');
+  await page.waitForTimeout(500);
+  const whenTall = await gap();
+  console.log('gap with a 5-line composer:', whenTall);
+  expect(whenTall).toBeGreaterThanOrEqual(16);
+  await page.screenshot({ path: 'test-results/gap-tall.png', clip: { x: 64, y: 220, width: 1376, height: 400 } });
+});
+
+test('banner is always visible; the cue flashes the config card', async ({ page }) => {
+  await stub(page, [DEFINITION_REPLY]);
+  await page.setViewportSize({ width: 1500, height: 800 });
+  await page.goto('/settings/automation');
+
+  const banner = page.getByRole('note');
+  await expect(banner).toContainText('This is a prototype only, it is not using any real data and is not built');
+  const bannerBox = (await banner.boundingBox())!;
+  console.log('banner y:', Math.round(bannerBox.y), 'height:', Math.round(bannerBox.height));
+
+  const input = page.getByLabel('Message the Configuration Agent');
+  await input.fill('strip the INV- prefix');
+  await input.press('Enter');
+
+  const cue = page.getByRole('button', { name: /Your configuration is ready in the Builder/ });
+  await expect(cue).toBeVisible({ timeout: 15000 });
+    await cue.click();
+  // The card carries the flash class while animating
+  const card = page.locator('[class*="configCard"]').first();
+  await expect(card).toHaveClass(/configCardHighlight/);
+  // …and drops it once the animation is done
+  await expect(card).not.toHaveClass(/configCardHighlight/, { timeout: 3000 });
+
+  // Clicking again re-triggers it
+  await cue.click();
+  await expect(card).toHaveClass(/configCardHighlight/);
+});

@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import { CheckCircle2, ClipboardCheck, Sparkles } from "lucide-react"
 import styles from "./automation.module.css"
 import { Badge, Bullets, Button, Checklist, Disclosure, Row, Section, Segmented, StatusBadge, Switch } from "./ui"
@@ -222,6 +223,7 @@ function GeneratingBody() {
 }
 
 export function ConfigCard({
+  highlightNonce,
   config,
   generating,
   saved,
@@ -234,6 +236,8 @@ export function ConfigCard({
   onRunBackTest,
   onPreviewEmail,
 }: {
+  /** Increment to flash the card, e.g. when the operator clicks the chat cue */
+  highlightNonce?: number
   config: XelixConfig | null
   generating: boolean
   saved: boolean
@@ -246,6 +250,18 @@ export function ConfigCard({
   onRunBackTest: () => void
   onPreviewEmail: () => void
 }) {
+  const [flashing, setFlashing] = useState(false)
+  const seenNonce = useRef(highlightNonce ?? 0)
+
+  useEffect(() => {
+    const nonce = highlightNonce ?? 0
+    if (nonce === seenNonce.current) return
+    seenNonce.current = nonce
+    setFlashing(true)
+    const timer = window.setTimeout(() => setFlashing(false), 900)
+    return () => window.clearTimeout(timer)
+  }, [highlightNonce])
+
   const title = saved ? "Configuration" : "Proposed configuration"
   const status = generating ? (config ? "updating" : "building") : saved ? (live ? "live" : "off") : "draft"
 
@@ -256,7 +272,7 @@ export function ConfigCard({
   const mode = config?.mode ?? "suggest"
 
   return (
-    <div className={styles.configCard}>
+    <div className={[styles.configCard, flashing ? styles.configCardHighlight : ""].filter(Boolean).join(" ")}>
       <div className={styles.configHead}>
         <h2 className={styles.configTitle}>{title}</h2>
         <div className={styles.configHeadRight}>

@@ -11,6 +11,10 @@ import { outputTypeLabel, type XelixConfig } from "../agentbuilder/xelixConfig"
 import { statsLine, type PendingAction, type SavedAgent, type WorkspaceMessage } from "./workspaceTypes"
 
 const STICK_THRESHOLD = 80
+/** Gap left between the last message and the top of the floating composer */
+const COMPOSER_GAP = 24
+/** Used until the composer has been measured */
+const COMPOSER_FALLBACK = 160
 
 function ChatHeader({
   agent,
@@ -130,6 +134,7 @@ export function ChatPane({
   onDiscardEmail,
   onNewAgent,
   onStartOver,
+  onHighlightConfig,
 }: {
   messages: WorkspaceMessage[]
   agent: SavedAgent | null
@@ -144,23 +149,39 @@ export function ChatPane({
   onDiscardEmail: (messageId: string) => void
   onNewAgent: () => void
   onStartOver: () => void
+  onHighlightConfig: () => void
 }) {
   const [input, setInput] = useState("")
   const [activityOpen, setActivityOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const composerRef = useRef<HTMLDivElement>(null)
   const stickRef = useRef(true)
+  const [composerHeight, setComposerHeight] = useState(COMPOSER_FALLBACK)
 
   const showHeader = !!agent || !!draftConfig
   const agentName = agent?.name ?? (draftConfig ? outputTypeLabel(draftConfig.outputType) : null)
   const thinking = !!pending
+
+  // The composer floats over the conversation and changes height as the input grows,
+  // so the message area's bottom padding tracks it rather than guessing a fixed value
+  useLayoutEffect(() => {
+    const node = composerRef.current
+    if (!node) return
+    const measure = () => setComposerHeight(node.offsetHeight)
+    measure()
+    if (typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
 
   // Only follow new content while the operator is already near the bottom
   useLayoutEffect(() => {
     const node = scrollRef.current
     if (!node || !stickRef.current) return
     node.scrollTop = node.scrollHeight
-  }, [messages, pending])
+  }, [messages, pending, composerHeight])
 
   useEffect(() => {
     if (!thinking) inputRef.current?.focus()
@@ -211,7 +232,12 @@ export function ChatPane({
         />
       )}
 
-      <div className={styles.messageArea} ref={scrollRef} onScroll={handleScroll}>
+      <div
+        className={styles.messageArea}
+        ref={scrollRef}
+        onScroll={handleScroll}
+        style={{ paddingBottom: composerHeight + COMPOSER_GAP }}
+      >
         <div
           className={[styles.messageColumn, messages.length === 0 && !thinking ? styles.messageColumnCentred : ""]
             .filter(Boolean)
@@ -235,13 +261,14 @@ export function ChatPane({
               onDismissQuestion={() => onDismissQuestion(message.id)}
               onApplyEmail={() => onApplyEmail(message.id)}
               onDiscardEmail={() => onDiscardEmail(message.id)}
+              onHighlightConfig={onHighlightConfig}
             />
           ))}
           {pending && <ThinkingIndicator label={pending.label} />}
         </div>
       </div>
 
-      <div className={styles.composer}>
+      <div className={styles.composer} ref={composerRef}>
         <div className={styles.composerInner}>
           <div className={styles.composerPill}>
             <textarea
@@ -273,9 +300,6 @@ export function ChatPane({
             </button>
           </div>
           <p className={styles.composerHint}>Enter to send</p>
-          <p className={[styles.prototypeNote, styles.prototypeNoteCentre].join(" ")}>
-            This is a prototype only, it is not using any real data and is not built
-          </p>
         </div>
       </div>
     </div>

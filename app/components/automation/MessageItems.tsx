@@ -191,12 +191,12 @@ export function ThinkingIndicator({ label }: { label: string }) {
   )
 }
 
-export function BuilderReadyCue() {
+export function BuilderReadyCue({ onClick }: { onClick: () => void }) {
   return (
-    <p className={styles.readyCue}>
+    <button type="button" className={styles.readyCue} onClick={onClick}>
       Your configuration is ready in the Builder
       <ChevronRight size={14} aria-hidden="true" className={styles.cueChevron} />
-    </p>
+    </button>
   )
 }
 
@@ -208,6 +208,7 @@ export function MessageRow({
   onDismissQuestion,
   onApplyEmail,
   onDiscardEmail,
+  onHighlightConfig,
 }: {
   message: WorkspaceMessage
   interactiveQuestion: boolean
@@ -216,6 +217,7 @@ export function MessageRow({
   onDismissQuestion: () => void
   onApplyEmail: () => void
   onDiscardEmail: () => void
+  onHighlightConfig: () => void
 }) {
   const isAgent = message.role === "assistant"
 
@@ -263,7 +265,7 @@ export function MessageRow({
           {message.backTest && <BackTestCard backTest={message.backTest} />}
         </div>
       </div>
-      {message.configReady && <BuilderReadyCue />}
+      {message.configReady && <BuilderReadyCue onClick={onHighlightConfig} />}
     </>
   )
 }

@@ -9,6 +9,7 @@ import { OUTPUT_ICONS } from "./outputIcons"
 import { outputGroup, outputTypeLabel, supportsMode } from "../agentbuilder/xelixConfig"
 import { GROUP_ICONS } from "./outputIcons"
 import { formatCreatedAt, loadAgents, type SavedAgent } from "./workspaceTypes"
+import { PrototypeBanner } from "./PrototypeBanner"
 
 const MODE_LABELS = { shadow: "Shadow", suggest: "Suggest", auto: "Auto apply" } as const
 
@@ -62,8 +63,9 @@ export function CreatedAgentsView() {
   const count = agents?.length ?? 0
 
   return (
-    <div className={[styles.tokens, styles.createdPage].join(" ")}>
-      <div className={styles.createdInner}>
+    <div className={styles.tokens}>
+      <PrototypeBanner />
+      <div className={[styles.createdPage, styles.createdInner].join(" ")}>
         <Link href="/settings/automation" className={styles.backLink}>
           <ArrowLeft size={14} aria-hidden="true" />
           Back to Agent Builder
@@ -75,10 +77,6 @@ export function CreatedAgentsView() {
             : count === 0
               ? "Nothing accepted yet."
               : `${count} ${count === 1 ? "agent" : "agents"} accepted in the Agent Builder, ready to load into Xelix.`}
-        </p>
-
-        <p className={styles.prototypeNote} style={{ marginTop: -24, marginBottom: 32 }}>
-          This is a prototype only, it is not using any real data and is not built
         </p>
 
         {agents !== null && count === 0 && (

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Sparkles } from "lucide-react"
 import styles from "./automation.module.css"
 import { ChatPane } from "./ChatPane"
+import { PrototypeBanner } from "./PrototypeBanner"
 import { ConfigCard } from "./ConfigCard"
 import { extractBackTest, extractEmail, extractQuestion } from "./parseReply"
 import {
@@ -45,6 +46,9 @@ export function AutomationWorkspace() {
   const [agent, setAgent] = useState<SavedAgent | null>(null)
   const [pending, setPending] = useState<PendingAction | null>(null)
   const [error, setError] = useState<string | null>(null)
+  /** Bumped when the operator jumps to the Builder from the chat cue */
+  const [highlightNonce, setHighlightNonce] = useState(0)
+  const builderBodyRef = useRef<HTMLDivElement>(null)
 
   // The transcript as sent to the API — kept in a ref so a send can read the
   // latest history without waiting for a re-render
@@ -296,10 +300,17 @@ export function AutomationWorkspace() {
   const emailMessages = messages.filter((message) => message.email)
   const latestEmailId = emailMessages.length ? emailMessages[emailMessages.length - 1].id : null
 
+  const highlightConfig = useCallback(() => {
+    setHighlightNonce((prev) => prev + 1)
+    builderBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+  }, [])
+
   return (
     <div className={[styles.tokens, styles.workspace].join(" ")}>
       <Aurora />
-      <div className={styles.content}>
+      <div className={styles.shell}>
+        <PrototypeBanner />
+        <div className={styles.content}>
         <ChatPane
           messages={messages}
           agent={agent}
@@ -314,6 +325,7 @@ export function AutomationWorkspace() {
           onDiscardEmail={handleDiscardEmail}
           onNewAgent={reset}
           onStartOver={reset}
+          onHighlightConfig={highlightConfig}
         />
 
         <aside className={styles.builder} aria-label="Builder">
@@ -326,8 +338,9 @@ export function AutomationWorkspace() {
               <div className={styles.builderSubtitle}>The plan takes shape as you chat</div>
             </div>
           </div>
-          <div className={styles.builderBody}>
+          <div className={styles.builderBody} ref={builderBodyRef}>
             <ConfigCard
+              highlightNonce={highlightNonce}
               config={config}
               generating={!!pending && pending.kind === "build"}
               saved={!!agent}
@@ -347,6 +360,7 @@ export function AutomationWorkspace() {
             )}
           </div>
         </aside>
+        </div>
       </div>
     </div>
   )
