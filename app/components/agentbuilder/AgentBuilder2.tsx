@@ -17,6 +17,7 @@ import { simulateAgentProcessingBatch, type AgentStats, type AgentConfig as SimA
 import { calculateComparisonMetrics, createInvoiceComparisons, formatMetricsForDisplay, generateExecutiveSummary, type ComparisonMetrics, type InvoiceComparison } from './comparisonMetrics'
 import { isDemoAgent, buildDemoResults } from './demoFixtures'
 import { groupAgentsByStage, normalizeStageId } from "./stageUtils"
+import { parseStoredConfig } from "./xelixConfig"
 
 interface AgentMetrics {
   evaluated: number
@@ -72,6 +73,7 @@ export function AgentBuilder2({
   const [chatKey, setChatKey] = useState(0)
   const [detectedStage, setDetectedStage] = useState<string>("")
   const [detectedLane, setDetectedLane] = useState<string>("")
+  const [detectedMode, setDetectedMode] = useState<Agent["mode"] | undefined>(undefined)
 
   // Testing modal state
   const [selectedTimePeriod, setSelectedTimePeriod] = useState<"7days" | "30days" | "3months" | "6months">("7days")
@@ -108,6 +110,12 @@ export function AgentBuilder2({
 
   // Extract a clean agent name from the prompt
   const extractAgentName = (prompt: string): string => {
+    // Xelix configuration blocks carry their own one-line label
+    const config = parseStoredConfig(prompt)
+    if (config?.summary?.trim()) {
+      return config.summary.trim()
+    }
+
     // Try to extract from ROLE line
     const roleMatch = prompt.match(/ROLE:\s*(.+?)(?:\s*-|Agent|\n|$)/i)
     if (roleMatch) {
@@ -369,6 +377,7 @@ export function AgentBuilder2({
         name: currentAgent.name === 'New Agent' || !currentAgent.name ? agentName : currentAgent.name,
         stage: normalizeStageId(detectedStage || currentAgent.stage || ''),
         lane: detectedLane || currentAgent.lane || '',
+        mode: detectedMode || currentAgent.mode,
         prompt,
         skills: [],
         documents: documents || currentAgent.documents,
@@ -391,7 +400,7 @@ export function AgentBuilder2({
         stage: normalizeStageId(detectedStage || stage),
         lane: detectedLane,
         active: false,
-        mode: 'auto-apply',
+        mode: detectedMode || 'auto-apply',
         prompt,
         skills: [],
         documents: documents || [],
@@ -745,6 +754,10 @@ export function AgentBuilder2({
               onLaneDetected={(lane) => {
                 console.log('[AgentBuilder2] Lane detected:', lane)
                 setDetectedLane(lane)
+              }}
+              onModeDetected={(mode) => {
+                console.log('[AgentBuilder2] Mode detected:', mode)
+                setDetectedMode(mode)
               }}
               agentId={currentAgent?.id}
               currentPrompt={currentAgent?.prompt}

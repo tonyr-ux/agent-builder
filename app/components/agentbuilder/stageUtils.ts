@@ -1,5 +1,13 @@
 /** Known P2P / AP domain labels for sidebar + workflow sections */
 export const STAGE_LABELS: Record<string, string> = {
+  // Xelix modules — used by configurations built in Agent Builder 2
+  capture: "Xelix Capture",
+  helpdesk: "Helpdesk",
+  statements: "Statements",
+  transactions: "Transactions",
+  vendors: "Vendors",
+  reports: "Reports",
+  // Legacy P2P stages — kept for existing agents
   procurement: "Procurement",
   receiving: "Goods Receiving",
   ingestion: "Invoice Import",
@@ -9,7 +17,6 @@ export const STAGE_LABELS: Record<string, string> = {
   approval: "Approval",
   posting: "Posting",
   payments: "Payments",
-  helpdesk: "Helpdesk",
   "vendor-management": "Vendor Management",
   compliance: "Compliance",
   uncategorized: "Uncategorized",

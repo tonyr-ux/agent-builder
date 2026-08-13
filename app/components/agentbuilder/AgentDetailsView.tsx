@@ -5,6 +5,7 @@ import { Agent } from "./AgentBuilderPage"
 import { Pencil, Clock, Trash2, Save, Check, X, AlertTriangle, ChevronDown, ChevronRight, Mail } from "lucide-react"
 import { Button } from "@/app/components/ui/button"
 import { Card } from "@/app/components/ui/card"
+import { OUTPUT_LABELS_BY_STAGE, XELIX_MODULE_STAGES } from "./xelixConfig"
 
 interface AgentMetrics {
   evaluated: number
@@ -28,8 +29,10 @@ interface AgentDetailsViewProps {
   agentMetrics?: AgentMetrics
 }
 
-/** Optional focus-area suggestions by domain — free text is always allowed */
+/** Optional focus-area suggestions by domain — free text is always allowed.
+ *  Xelix modules suggest their supported configuration outputs. */
 const STAGE_FOCUS_SUGGESTIONS: Record<string, string[]> = {
+  ...OUTPUT_LABELS_BY_STAGE,
   procurement: ["Requisition Intake", "Catalog Buying", "PO Creation", "PO Amendment"],
   receiving: ["ASN Processing", "Goods Receipt", "Quantity Check", "Quality Check"],
   ingestion: ["Source Intake", "File Triage", "Duplicate Detection", "Supplier Routing"],
@@ -39,12 +42,12 @@ const STAGE_FOCUS_SUGGESTIONS: Record<string, string[]> = {
   approval: ["Approver Routing", "Reminder Nudges", "Exception Pack Creation", "Escalation"],
   posting: ["Coding Suggestion", "ERP Payload Creation", "Posting Validation", "Reconciliation"],
   payments: ["Payment Proposal", "Early Payment Discount", "Remittance Advice", "Payment Hold"],
-  helpdesk: ["Ticket Triage", "Auto-Reply Rules", "SLA Routing", "Escalation Rules", "Inbox Classification"],
   "vendor-management": ["Vendor Onboarding", "Bank Detail Verification", "Master Data Update", "Vendor Risk Check"],
   compliance: ["Tax Validation", "Spend Policy", "Segregation of Duties", "Audit Trail"],
 }
 
 const stages = [
+  ...XELIX_MODULE_STAGES,
   { id: "procurement", name: "Procurement" },
   { id: "receiving", name: "Goods Receiving" },
   { id: "ingestion", name: "Invoice Import" },
@@ -54,7 +57,6 @@ const stages = [
   { id: "approval", name: "Approval" },
   { id: "posting", name: "Posting" },
   { id: "payments", name: "Payments" },
-  { id: "helpdesk", name: "Helpdesk" },
   { id: "vendor-management", name: "Vendor Management" },
   { id: "compliance", name: "Compliance" },
 ]
