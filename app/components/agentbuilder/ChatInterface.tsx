@@ -8,6 +8,17 @@ import { Textarea } from "@/app/components/ui/textarea"
 import type { Agent, AgentDocument } from "./AgentBuilderPage"
 import { extractTextFromFile, formatFileSize } from "@/app/utils/documentExtractor"
 import { storeDocument } from "@/app/utils/documentStorage"
+import {
+  type XelixConfig,
+  configAgentMode,
+  configFields,
+  configModeLabel,
+  configStage,
+  extractConfigBlock,
+  outputTypeLabel,
+  serialiseConfig,
+  stripConfigBlock,
+} from "./xelixConfig"
 
 type Attachment = {
   id: string
@@ -26,6 +37,10 @@ type Message = {
   content: string
   timestamp: Date
   generatedPrompt?: string
+  /** Parsed Xelix configuration block, when the reply contained one */
+  config?: XelixConfig
+  /** The reply text with the configuration block removed */
+  proseContent?: string
   suggestedSkills?: string[]
   attachments?: Attachment[]
   isSettingsRecommendation?: boolean
@@ -38,6 +53,7 @@ interface ChatInterfaceProps {
   onPromptGenerated?: (prompt: string, skills: string[], documents?: AgentDocument[]) => void
   onStageDetected?: (stage: string) => void
   onLaneDetected?: (lane: string) => void
+  onModeDetected?: (mode: "observe" | "suggest" | "auto-apply") => void
   currentPrompt?: string
   agentId?: string
   currentAgent?: Agent | null
@@ -73,7 +89,7 @@ const AVAILABLE_SKILLS = [
 const GREETING =
   "Hi! Tell me what you'd like your agent to do, and I'll help you shape it."
 
-export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onPromptGenerated, onStageDetected, onLaneDetected, currentPrompt, agentId, currentAgent, onOpenTest, initialScriptedFlow }, ref) => {
+export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ onPromptGenerated, onStageDetected, onLaneDetected, onModeDetected, currentPrompt, agentId, currentAgent, onOpenTest, initialScriptedFlow }, ref) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -539,7 +555,7 @@ ${signature}`
       }
 
       // Extract structured prompt and skills from response
-      const { prompt, skills, isQuestion, stage, lane, isSettingsRecommendation, settingsLink } = extractPromptAndSkills(fullResponse)
+      const { prompt, skills, isQuestion, stage, lane, isSettingsRecommendation, settingsLink, config, proseContent, mode } = extractPromptAndSkills(fullResponse)
 
       console.log("[v0] Extraction result:", {
         promptLength: prompt.length,
@@ -569,6 +585,12 @@ ${signature}`
         onLaneDetected(lane)
       }
 
+      // Rule mode from the configuration (Shadow / Suggest / Auto apply)
+      if (mode && onModeDetected) {
+        console.log("[v0] Calling onModeDetected with:", mode)
+        onModeDetected(mode)
+      }
+
       // Update final message with extracted data
       setMessages((prev) =>
         prev.map((msg) =>
@@ -577,6 +599,8 @@ ${signature}`
                 ...msg,
                 content: fullResponse,
                 generatedPrompt: prompt || undefined, // Only set if prompt exists
+                config,
+                proseContent,
                 suggestedSkills: undefined,
                 isSettingsRecommendation: isSettingsRecommendation || undefined,
                 settingsLink: settingsLink || undefined,
@@ -712,12 +736,13 @@ ${signature}`
                 </div>
               )}
               
-              {/* Regular message content - show only if not a generated prompt or settings recommendation */}
-              {!(message.role === "assistant" && message.generatedPrompt) && !message.isSettingsRecommendation && (
+              {/* Regular message content - hidden only for legacy generated prompts and settings recommendations.
+                  Configuration replies keep their conversational text and show the configuration below it. */}
+              {!(message.role === "assistant" && message.generatedPrompt && !message.config) && !message.isSettingsRecommendation && (
                 <div
                   className={`px-3 py-2 rounded-lg ${message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}
                 >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.config ? (message.proseContent || message.content) : message.content}</p>
                   {message.showTestButton && onOpenTest && (
                     <button
                       onClick={onOpenTest}
@@ -729,12 +754,44 @@ ${signature}`
                 </div>
               )}
               
+              {/* Xelix configuration block */}
+              {message.role === "assistant" && message.config && (
+                <div className="rounded-lg border border-purple-200 bg-purple-50 p-3 space-y-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-purple-900 text-white">
+                      {outputTypeLabel(message.config.outputType)}
+                    </span>
+                    {configModeLabel(message.config) && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full border border-purple-300 text-purple-900">
+                        {configModeLabel(message.config)}
+                      </span>
+                    )}
+                  </div>
+                  {message.config.summary && (
+                    <p className="text-sm font-medium text-gray-950">{message.config.summary}</p>
+                  )}
+                  {message.config.description && (
+                    <p className="text-xs leading-relaxed text-gray-500">{message.config.description}</p>
+                  )}
+                  {configFields(message.config).map((field) => (
+                    <div key={field.label} className="space-y-0.5">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">{field.label}</p>
+                      {field.values.map((value, i) => (
+                        <p key={i} className="text-xs leading-relaxed text-gray-950 whitespace-pre-wrap">{value}</p>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Generated Prompt Display with Apply Button */}
               {message.role === "assistant" && message.generatedPrompt && message.generatedPrompt.length > 0 && (
                 <>
-                  <div className="px-3 py-2 rounded-lg bg-muted">
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.generatedPrompt}</p>
-                  </div>
+                  {!message.config && (
+                    <div className="px-3 py-2 rounded-lg bg-muted">
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.generatedPrompt}</p>
+                    </div>
+                  )}
                   {!message.applied && (
                     <Button
                       size="sm"
@@ -742,7 +799,7 @@ ${signature}`
                       onClick={() => handleApplyPrompt(message.generatedPrompt!, [], message.id)}
                     >
                       <CheckCircle2 className="w-4 h-4" />
-                      Apply to Agent
+                      {message.config ? "Apply configuration" : "Apply to Agent"}
                     </Button>
                   )}
                 </>
@@ -901,7 +958,7 @@ ${signature}`
 
 ChatInterface.displayName = "ChatInterface"
 
-function extractPromptAndSkills(response: string): { prompt: string; skills: string[]; isQuestion: boolean; stage?: string; lane?: string; isSettingsRecommendation?: boolean; settingsLink?: string } {
+function extractPromptAndSkills(response: string): { prompt: string; skills: string[]; isQuestion: boolean; stage?: string; lane?: string; isSettingsRecommendation?: boolean; settingsLink?: string; config?: XelixConfig; proseContent?: string; mode?: "observe" | "suggest" | "auto-apply" } {
   let prompt = ""
   const skills: string[] = []
   let stage: string | undefined = undefined
@@ -910,7 +967,25 @@ function extractPromptAndSkills(response: string): { prompt: string; skills: str
   let settingsLink: string | undefined = undefined
 
   console.log("[v0] Full AI response:", response.substring(0, 500))
-  
+
+  // Xelix configuration block — the Configuration Agent's output contract.
+  // A reply with a block is a finished configuration, not a question.
+  const configBlock = extractConfigBlock(response)
+  if (configBlock) {
+    const { config, blockText } = configBlock
+    console.log("[v0] Detected Xelix configuration:", config.outputType)
+    return {
+      prompt: serialiseConfig(config),
+      skills: [],
+      isQuestion: false,
+      stage: configStage(config),
+      lane: outputTypeLabel(config.outputType),
+      config,
+      proseContent: stripConfigBlock(response, blockText),
+      mode: configAgentMode(config),
+    }
+  }
+
   // Check for SETTINGS_RECOMMENDATION
   if (response.includes('SETTINGS_RECOMMENDATION')) {
     isSettingsRecommendation = true
