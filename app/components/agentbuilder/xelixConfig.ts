@@ -163,9 +163,36 @@ export function extractConfigBlock(response: string): { config: XelixConfig; blo
   return found
 }
 
-/** The reply with the configuration block removed, for the chat bubble. */
+/**
+ * Lines that only exist to introduce the block ("Here is the configuration:").
+ * The operator sees the configuration as a card, not inline, so a line like that is
+ * left pointing at nothing once the block is lifted out.
+ */
+const BLOCK_ANNOUNCEMENT =
+  /^(?:here(?:'s| is| are)?\b.*|(?:the |this )?(?:proposed |updated )?(?:config(?:uration)?|rule|definition|setup)\b.*|below\b.*|see\b.*)[:—-]\s*$/i
+
+/** The reply with the configuration block, and any line announcing it, removed. */
 export function stripConfigBlock(response: string, blockText: string): string {
-  return response.replace(blockText, "").replace(/\n{3,}/g, "\n\n").trim()
+  const at = response.indexOf(blockText)
+  const before = (at === -1 ? response : response.slice(0, at)).split("\n")
+  const after = at === -1 ? "" : response.slice(at + blockText.length)
+
+  // Trim the lines that ran up to the block, while they're short enough to be a
+  // lead-in rather than content
+  while (before.length) {
+    const last = before[before.length - 1].trim()
+    if (!last) {
+      before.pop()
+      continue
+    }
+    if (last.length <= 80 && BLOCK_ANNOUNCEMENT.test(last)) {
+      before.pop()
+      continue
+    }
+    break
+  }
+
+  return [before.join("\n").trim(), after.trim()].filter(Boolean).join("\n\n").replace(/\n{3,}/g, "\n\n").trim()
 }
 
 /** What gets stored on the agent — the block itself, normalised. */

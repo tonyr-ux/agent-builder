@@ -17,6 +17,8 @@ const CONFIG_REPLY = `This emails the vendor whenever an invoice arrives without
 
 It runs on Auto apply, since an informational email to a vendor is safe and easily reversible. You can switch it to Suggest or Shadow whenever you like.
 
+Here is the configuration:
+
 \`\`\`json
 {
   "outputType": "send-emails",
@@ -115,6 +117,8 @@ test('proposed configuration, then accept', async ({ page }) => {
   // The prose reply survives; the raw json block never shows
   await expect(page.getByText(/stops chasing by hand/)).toBeVisible();
   await expect(page.getByText('```json')).toHaveCount(0);
+  // The configuration renders as a card, so a line announcing an inline block is dropped
+  await expect(page.getByText('Here is the configuration:')).toHaveCount(0);
   await page.screenshot({ path: 'test-results/auto-3-proposed.png' });
 
   await page.getByRole('button', { name: /Accept & go live/ }).click();
