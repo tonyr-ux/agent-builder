@@ -47,7 +47,7 @@ test('configuration card renders under the prose reply', async ({ page }) => {
     }),
   );
 
-  await page.goto('/settings#agent-builder-2');
+  await page.goto('/settings-old#agent-builder-2');
   await page.getByRole('button', { name: /new agent|create agent|add agent/i }).first().click();
 
   const input = page.getByPlaceholder(/Describe what your agent should do/i);

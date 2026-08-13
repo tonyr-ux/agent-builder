@@ -64,7 +64,7 @@ export function TeachingCard({
         {/* Show link to TechSupply agent if applicable */}
         {isTechSupplyCustomerID && (
           <Link
-            href="/settings?agent=TechSupply%20Customer%20ID#automation-agent-builder-2"
+            href="/settings-old?agent=TechSupply%20Customer%20ID#automation-agent-builder-2"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-white text-purple-900 border border-purple-900 rounded-md hover:bg-purple-50 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"

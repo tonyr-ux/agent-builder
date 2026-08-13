@@ -49,7 +49,7 @@ export function SubstitutionSuggestionPopover({
   reason,
   differences,
   title = 'Smart Match (Substitution)',
-  agentLink = '/settings?agent=Substitution%20Agent#automation-agent-builder-2',
+  agentLink = '/settings-old?agent=Substitution%20Agent#automation-agent-builder-2',
   agentLinkLabel = 'View Smart Match (Substitution) in Agent Builder →',
   matchNote,
   onAccept,

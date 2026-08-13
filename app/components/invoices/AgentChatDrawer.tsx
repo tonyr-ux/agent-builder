@@ -72,7 +72,7 @@ export function AgentChatDrawer({ isOpen, onClose }: AgentChatDrawerProps) {
       name: agentName,
     });
 
-    const url = `/settings?${params.toString()}#automation-agent-builder-2`;
+    const url = `/settings-old?${params.toString()}#automation-agent-builder-2`;
     window.open(url, '_blank');
     onClose();
   };

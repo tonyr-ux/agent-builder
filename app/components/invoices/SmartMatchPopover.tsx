@@ -146,7 +146,7 @@ export function SmartMatchPopover({
           {/* Agent link */}
           <div className="mt-2.5 pt-2.5 border-t border-purple-200">
             <a
-              href="/settings?agent=Semantic%20Match%20Agent#automation-agent-builder-2"
+              href="/settings-old?agent=Semantic%20Match%20Agent#automation-agent-builder-2"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs text-purple-700 hover:text-purple-900 transition-colors"

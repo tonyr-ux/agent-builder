@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Navigation from './Navigation';
 import TopBar from './TopBar';
-import { MODULE_PILLS } from '@/app/constants/navigation';
+import { MODULE_PILLS, MODULE_VIEWS } from '@/app/constants/navigation';
 import { getPOVisibilityPreference, getLaunchpadVisibilityPreference, getExceptionNavigationPreference } from '@/app/utils/cookies';
 
 interface AppLayoutProps {
@@ -26,8 +26,10 @@ export default function AppLayout({ activeModule, children, customTopBar, hideNa
 
   // Initialize currentView from the current URL (query tab, hash, or pathname).
   const [currentView, setCurrentView] = useState<string>(() => {
+    const modulePills = MODULE_PILLS[activeModule] || [];
+
+    // Search and hash are only readable in the browser
     if (typeof window !== 'undefined') {
-      const modulePills = MODULE_PILLS[activeModule] || [];
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab');
       const hash = window.location.hash; // '#dashboard', etc.
@@ -44,25 +46,26 @@ export default function AppLayout({ activeModule, children, customTopBar, hideNa
 
       // Hash match takes priority (most specific)
       if (hash) {
-        for (const pill of modulePills) {
-          if (pill.href.includes('#')) {
-            const [, pillHash] = pill.href.split('#');
-            if (hash === `#${pillHash}` || hash.endsWith(`-${pillHash}`)) return pill.id;
-          }
-        }
+        const bare = hash.substring(1);
+        const viewIds = MODULE_VIEWS[activeModule] ?? modulePills.map((pill) => pill.id);
+        const match = viewIds.find((id) => bare === id || bare.endsWith(`-${id}`));
+        if (match) return match;
       }
+    }
 
-      // Pathname match — skip '/' to avoid ambiguity with the root SPA
-      if (pathname && pathname !== '/') {
-        for (const pill of modulePills) {
-          if (!pill.href.includes('#') && pill.href === pathname) {
-            return pill.id;
-          }
+    // Pathname match — skip '/' to avoid ambiguity with the root SPA.
+    // usePathname() is available during server rendering too, so this sits outside
+    // the window guard: otherwise the server picks a different pill than the client
+    // and the mismatched aria-current/className survives hydration.
+    if (pathname && pathname !== '/') {
+      for (const pill of modulePills) {
+        if (!pill.href.includes('#') && pill.href === pathname) {
+          return pill.id;
         }
       }
     }
-    // Fallback defaults
-    if (activeModule === 'settings') return 'dashboard';
+
+    // Fallback: the module's first pill
     const fallbackPills = MODULE_PILLS[activeModule];
     return fallbackPills?.length ? fallbackPills[0].id : '';
   });
@@ -161,17 +164,27 @@ export default function AppLayout({ activeModule, children, customTopBar, hideNa
       }
       const hash = window.location.hash.substring(1);
       if (hash) {
-        const match = pills.find(
-          (pill) => pill.id === hash || hash.endsWith(`-${pill.id}`)
-        );
-        if (match) setCurrentView(match.id);
+        const viewIds = MODULE_VIEWS[currentModule] ?? pills.map((pill) => pill.id);
+        const match = viewIds.find((id) => hash === id || hash.endsWith(`-${id}`));
+        if (match) {
+          setCurrentView(match);
+          return;
+        }
       }
+
+      // No hash to go on: match a pill that points at a real path (e.g. /settings/automation).
+      // The state initialiser can't do this — it runs on the server, where there's no location,
+      // and hydration keeps that value — so a direct load would highlight the wrong pill.
+      const pathMatch = pills.find(
+        (pill) => !pill.href.includes('#') && pill.href === window.location.pathname
+      );
+      if (pathMatch) setCurrentView(pathMatch.id);
     };
 
     resolveViewFromLocation();
     window.addEventListener('hashchange', resolveViewFromLocation);
     return () => window.removeEventListener('hashchange', resolveViewFromLocation);
-  }, [currentModule]);
+  }, [currentModule, pathname]);
 
   return (
     <div className="flex min-h-screen bg-gray-50/60">
