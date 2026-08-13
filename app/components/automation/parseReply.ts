@@ -22,7 +22,8 @@ export type ParsedEmail = {
 
 export type ParsedBackTest = {
   intro?: string
-  items: { label: string; detail: string }[]
+  /** matched is false where the reply says the configuration would not act */
+  items: { label: string; detail: string; matched: boolean }[]
 }
 
 /** Bullet or numbered list markers: "- x", "* x", "• x", "1. x", "2) x" */
@@ -97,9 +98,12 @@ export function extractEmail(response: string): ParsedEmail | null {
  */
 const BACKTEST_SPLIT = /\s(?:—|–|→|->)\s|:\s(?=\S)/
 
+/** An outcome describes an action; a bare restatement of the sample item does not. */
+const NO_MATCH = /\b(no match|not matched|didn't match|did not match|no action|not populated|skipped|unchanged|left as|no derivation)\b/i
+
 export function extractBackTest(response: string): ParsedBackTest | null {
   const lines = response.split("\n")
-  const items: { label: string; detail: string }[] = []
+  const items: { label: string; detail: string; matched: boolean }[] = []
   const introLines: string[] = []
 
   for (const line of lines) {
@@ -109,8 +113,21 @@ export function extractBackTest(response: string): ParsedBackTest | null {
 
     const parts = candidate.split(BACKTEST_SPLIT)
     if (marker && parts.length >= 2) {
-      const [label, ...detail] = parts
-      items.push({ label: label.trim(), detail: detail.join(" — ").trim() })
+      const [label, ...rest] = parts
+      const detail = rest.join(" — ").trim()
+      const key = label.trim()
+
+      // Some replies list the sample items first and their outcomes afterwards.
+      // Fold the second mention into the first so an item never appears twice, and
+      // so an input line is never left standing in as if it were an outcome.
+      const existing = items.find((item) => item.label === key)
+      if (existing) {
+        existing.detail = existing.detail ? `${existing.detail} → ${detail}` : detail
+        existing.matched = !NO_MATCH.test(detail)
+        continue
+      }
+
+      items.push({ label: key, detail, matched: !NO_MATCH.test(detail) })
     } else if (items.length === 0) {
       introLines.push(candidate)
     }

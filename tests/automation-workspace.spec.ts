@@ -250,3 +250,31 @@ test('top nav shows only the two pills, hash deep links still resolve', async ({
   await page.waitForTimeout(900);
   await expect(page.locator('#main-content')).not.toBeEmpty();
 });
+
+// A reply that lists the sample items first and their outcomes afterwards must not
+// render an item twice, and a non-matching item must not read as though it acted
+const SPLIT_BACKTEST_REPLY = `To run a back-test, here are 3 sample invoice line items:
+
+- **INV-20491**: 2 bags of cement, description "Cement Bags"
+- **INV-20492**: 3 bags of cement, description "Portland Cement"
+- **INV-20494**: 4 bags of aggregate, description "Aggregate Bags"
+- **INV-20491**: 10 kg (2 bags x 5 kg), written to custom field cement_weight_kg
+- **INV-20492**: 15 kg (3 bags x 5 kg), written to custom field cement_weight_kg
+- **INV-20494**: No derivation (not cement), custom field cement_weight_kg not populated`;
+
+test('back-test folds split input/outcome lines into one row per item', async ({ page }) => {
+  await stub(page, [CONFIG_REPLY, SPLIT_BACKTEST_REPLY]);
+  await page.goto('/settings/automation');
+  await send(page, 'Convert each bag of cement into 5kg');
+  await expect(page.getByRole('button', { name: 'Run back-test' })).toBeEnabled({ timeout: 15000 });
+  await page.getByRole('button', { name: 'Run back-test' }).click();
+
+  const rows = page.locator('[class*="resultRow"]');
+  await expect(rows).toHaveCount(3, { timeout: 15000 });
+  // Each row carries the item and what would happen to it
+  await expect(rows.nth(0)).toContainText('2 bags of cement');
+  await expect(rows.nth(0)).toContainText('10 kg');
+  await expect(page.getByText('INV-20491').first()).toBeVisible();
+  // The non-matching item is marked as not acted on
+  await expect(rows.nth(2)).toContainText('No derivation');
+});

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { CheckCircle2, ChevronRight, Sparkles, User } from "lucide-react"
+import { CheckCircle2, ChevronRight, MinusCircle, Sparkles, User } from "lucide-react"
 import styles from "./automation.module.css"
 import { Badge, Button } from "./ui"
 import { toRichBlocks } from "./parseReply"
@@ -129,7 +129,11 @@ export function BackTestCard({ backTest }: { backTest: NonNullable<WorkspaceMess
       </p>
       {backTest.items.map((item, index) => (
         <div key={`${item.label}-${index}`} className={styles.resultRow}>
-          <CheckCircle2 size={16} aria-hidden="true" className={styles.resultIcon} />
+          {item.matched ? (
+            <CheckCircle2 size={16} aria-hidden="true" className={styles.resultIcon} />
+          ) : (
+            <MinusCircle size={16} aria-hidden="true" className={styles.resultIconQuiet} />
+          )}
           <div>
             <div className={styles.resultLabel}>{item.label}</div>
             <div className={styles.resultDetail}>{item.detail}</div>

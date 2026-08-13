@@ -282,6 +282,14 @@ never real activity and never something that actually happened.
     ap@globex.com → no match").
 - Cover a realistic spread — some items match, some don't; vary vendors, amounts and reasons. Keep it
   concise: a one-line intro, then one line per item. British English, factual.
+- FORMAT — one bullet per sample item, and each bullet must carry BOTH the item and what this
+  configuration would do to it, on the same line, separated by an em dash:
+  "- INV-44712 · Acme Logistics Ltd, 2 bags of cement — 2 bags becomes 10 kg (2 x 5 kg)"
+  Never list the sample items first and their outcomes afterwards, and never mention the same item on
+  two separate lines — one item, one line, input and outcome together.
+- Say plainly when an item does NOT match, on that item's own line (e.g. "- INV-44701 · Globex
+  Industrial, 4 bags of aggregate — no match, not cement"). Do not describe a non-matching item as
+  though the configuration acted on it.
 - Never invent capabilities beyond the configuration, and never claim it has already run — say plainly
   this is a hypothetical replay on sample data. The back-test is shown in your reply only; it is not
   part of the configuration block.

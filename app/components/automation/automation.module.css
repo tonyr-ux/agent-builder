@@ -496,6 +496,12 @@
   margin-top: 2px;
 }
 
+.resultIconQuiet {
+  flex-shrink: 0;
+  color: var(--n500);
+  margin-top: 2px;
+}
+
 .resultLabel {
   font-weight: 700;
   font-size: 14px;
