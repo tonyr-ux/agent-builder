@@ -1451,3 +1451,121 @@
     animation: none !important;
   }
 }
+
+/* ------------------------------------------------------- session log (hidden) --- */
+
+.logPage {
+  min-height: 100vh;
+  background: var(--surface);
+  padding: 32px 24px 64px;
+}
+
+.logInner {
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.logHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.logActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.logError {
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--n300);
+  border-radius: var(--r8);
+  background: var(--n50);
+  font-size: 14px;
+  color: var(--n900);
+}
+
+.logList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.logEntry {
+  border: 1px solid var(--n200);
+  border-radius: var(--r8);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.logEntryHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.logEntryHead:hover {
+  background: var(--n50);
+}
+
+.logEntryTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logEntryMeta {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--n600);
+}
+
+.logEntryBody {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--n100);
+}
+
+.logMetaRow {
+  padding: 12px 0;
+  font-size: 12px;
+  color: var(--n800);
+}
+
+.logSectionLabel {
+  margin: 12px 0 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  color: var(--n800);
+}
+
+.logPre {
+  margin: 0;
+  max-height: 22rem;
+  overflow: auto;
+  padding: 12px;
+  border-radius: var(--r4);
+  background: var(--n50);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}

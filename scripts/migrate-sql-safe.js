@@ -53,7 +53,8 @@ const migrations = [
   '204_update_invoice_status_workflow.sql',
   '120_add_total_tracking_fields.sql',
   '130_fix_invoice_totals_trigger.sql',
-  '205_add_approval_routing_features.sql'
+  '205_add_approval_routing_features.sql',
+  '206_add_config_agent_session_log.sql'
 ];
 
 /**

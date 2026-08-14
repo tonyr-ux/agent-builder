@@ -8,6 +8,7 @@ import { ChatPane } from "./ChatPane"
 import { PrototypeBanner } from "./PrototypeBanner"
 import { ConfigCard } from "./ConfigCard"
 import { extractBackTest, extractEmail, extractQuestion } from "./parseReply"
+import { recordTurn } from "./sessionLog"
 import {
   findAgent,
   saveAgent,
@@ -53,6 +54,7 @@ export function AutomationWorkspace() {
   // The transcript as sent to the API — kept in a ref so a send can read the
   // latest history without waiting for a re-render
   const historyRef = useRef<{ role: "user" | "assistant"; content: string }[]>([])
+  const turnCountRef = useRef(0)
 
   const config = agent?.config ?? draftConfig
 
@@ -78,6 +80,11 @@ export function AutomationWorkspace() {
       appendMessage(userMessage)
       historyRef.current = [...historyRef.current, { role: "user", content: userText }]
       setPending(action)
+
+      const startedAt = Date.now()
+      turnCountRef.current += 1
+      const turnIndex = turnCountRef.current
+      const request = { messages: historyRef.current, currentPrompt: agent ? serialiseConfig(agent.config) : undefined }
 
       try {
         const response = await fetch("/api/agent-builder/chat", {
@@ -160,10 +167,38 @@ export function AutomationWorkspace() {
           }
         }
 
+        recordTurn({
+          turnIndex,
+          action: action.kind,
+          agentName: agent?.name,
+          userMessage: userText,
+          request,
+          currentConfig: agent?.config,
+          rawResponse: full,
+          parsed: {
+            prose: reply.content,
+            config: block?.config,
+            question: reply.question,
+            email: reply.email,
+            backTest: reply.backTest,
+          },
+          durationMs: Date.now() - startedAt,
+        })
+
         appendMessage(reply)
       } catch (caught) {
         const message = caught instanceof Error ? caught.message : "Something went wrong."
         setError(message)
+        recordTurn({
+          turnIndex,
+          action: action.kind,
+          agentName: agent?.name,
+          userMessage: userText,
+          request,
+          currentConfig: agent?.config,
+          error: message,
+          durationMs: Date.now() - startedAt,
+        })
         appendMessage({
           id: nextId("agent"),
           role: "assistant",
