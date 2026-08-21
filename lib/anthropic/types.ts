@@ -190,7 +190,11 @@ export interface BatchImageAnalysisRequest {
 
 // Supported Claude models (Updated September 2025)
 export const CLAUDE_MODELS = {
-  // Latest Claude 4 models
+  // Current models
+  OPUS_5: 'claude-opus-5',          // Most capable; used for the Agent Builder chat
+  SONNET_5: 'claude-sonnet-5',      // Balanced speed/intelligence
+
+  // Claude 4 models
   SONNET_4: 'claude-sonnet-4-20250514', // Latest Sonnet model
   SONNET_3_5: 'claude-sonnet-4-20250514', // Alias for compatibility
   HAIKU_3_5: 'claude-3-5-haiku-20241022',   // Fast and efficient

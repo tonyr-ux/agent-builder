@@ -57,12 +57,8 @@ Railway will automatically redeploy with the new configuration.
 
 ### Agent Builder Chat
 
-The Agent Builder uses Groq for its AI chat assistant:
-
-1. Navigate to Agent Builder (`/agent-builder`)
-2. The chat interface on the right side uses Groq
-3. Describe what you want your agent to do
-4. Groq will generate detailed, production-ready prompts
+> **Note:** The Agent Builder chat now runs on Claude, not Groq - see
+> `ANTHROPIC_SETUP.md`. Groq remains available through the endpoints below.
 
 ### API Endpoints
 
