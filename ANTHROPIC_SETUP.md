@@ -73,6 +73,18 @@ The Invoice Scanner can extract:
 4. Review extracted data
 5. Edit if needed and save
 
+### Agent Builder Chat
+
+The Agent Builder chat assistant runs on Claude Opus 5 (`POST /api/agent-builder/chat`):
+
+1. Navigate to Agent Builder (`/agent-builder`)
+2. Describe what you want your agent to do in the chat panel
+3. Claude streams back a reply and a full configuration block you can apply
+
+The model, output limit, and reasoning effort live in `anthropicConfig.chat`
+(`lib/anthropic/config.ts`). The route streams Claude's response and re-shapes it
+into the SSE frames the chat interface parses.
+
 ### API Endpoints
 
 #### Chat Endpoint

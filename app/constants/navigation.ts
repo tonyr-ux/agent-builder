@@ -41,13 +41,33 @@ export interface TabItem {
 
 export const TAB_ITEMS: TabItem[] = [];
 
-// Module-specific pill configurations — agent-demo only exposes AP Automation tabs
+// Module-specific pill configurations — agent-demo exposes the Agent Builder flow only
 export const MODULE_PILLS: Record<string, TabItem[]> = {
   'settings': [
-    { id: 'dashboard', label: 'Dashboard', href: '/settings#dashboard' },
-    { id: 'agent-builder-2', label: 'Agent Builder', href: '/settings#agent-builder-2' },
-    { id: 'back-testing', label: 'Back Testing', href: '/settings#back-testing' },
-    { id: 'documents', label: 'Documents', href: '/settings#documents' },
-    { id: 'general-settings', label: 'General Settings', href: '/settings#general-settings' },
+    { id: 'agents', label: 'Agent Builder', href: '/settings/automation' },
+    { id: 'active-agents', label: 'Active Agents', href: '/settings/automation/created' },
+  ],
+  // Unlinked legacy screens, reachable at /settings-old
+  'settings-old': [
+    { id: 'dashboard', label: 'Dashboard', href: '/settings-old#dashboard' },
+    { id: 'agent-builder-2', label: 'Agent Builder', href: '/settings-old#agent-builder-2' },
+    { id: 'back-testing', label: 'Back Testing', href: '/settings-old#back-testing' },
+    { id: 'documents', label: 'Documents', href: '/settings-old#documents' },
+    { id: 'general-settings', label: 'General Settings', href: '/settings-old#general-settings' },
+  ],
+};
+
+/**
+ * View ids resolvable from a hash, per module. Kept separate from the pill list so a
+ * view can stay reachable by URL without appearing in the nav.
+ */
+export const MODULE_VIEWS: Record<string, string[]> = {
+  'settings': ['agents', 'active-agents'],
+  'settings-old': [
+    'dashboard',
+    'agent-builder-2',
+    'back-testing',
+    'documents',
+    'general-settings',
   ],
 };

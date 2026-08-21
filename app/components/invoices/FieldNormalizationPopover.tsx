@@ -90,7 +90,7 @@ export function FieldNormalizationPopover({
               </button>
             )}
             <a
-              href={`/settings?agent=${encodeURIComponent(agentName)}#automation-agent-builder-2`}
+              href={`/settings-old?agent=${encodeURIComponent(agentName)}#automation-agent-builder-2`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-purple-600 hover:text-purple-700 hover:underline flex items-center gap-1"

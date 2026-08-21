@@ -6,7 +6,7 @@ import { WebVitals } from "@/app/components/WebVitals";
 import { ToastProvider } from "@/app/components/ui/Toast";
 
 const barlow = Barlow({
-  weight: ['400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700', '900'],
   subsets: ['latin'],
   display: 'swap',
 });

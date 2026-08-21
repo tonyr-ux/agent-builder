@@ -9,6 +9,9 @@ export const anthropicConfig = {
   
   // Fast model for simple tasks
   fastModel: CLAUDE_MODELS.HAIKU_3_5,
+
+  // Conversational model for the Agent Builder chat
+  chatModel: CLAUDE_MODELS.OPUS_5,
   
   // Default parameters
   defaultMaxTokens: 4096,
@@ -23,6 +26,17 @@ export const anthropicConfig = {
     tokensPerImage: 1600,
   },
   
+  // Agent Builder chat settings
+  chat: {
+    model: CLAUDE_MODELS.OPUS_5,
+    // Streaming, so we can afford headroom: thinking and the reply share this
+    // budget, and a truncated configuration block can't be parsed by the client
+    maxTokens: 16000,
+    // 'low' | 'medium' | 'high' | 'xhigh' | 'max' - medium keeps the chat
+    // responsive without shallow reasoning on configuration edits
+    effort: 'medium' as const,
+  },
+
   // Invoice extraction settings
   invoiceExtraction: {
     model: CLAUDE_MODELS.SONNET_3_5, // Use best available model for accuracy

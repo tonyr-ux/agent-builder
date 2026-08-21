@@ -57,7 +57,40 @@ export class AnthropicService {
       throw new Error(`Anthropic Stream Error: ${error.message}`);
     }
   }
-  
+
+  /**
+   * Stream a conversational reply from Claude.
+   *
+   * Deliberately different from createMessageStream in two ways:
+   * - No sampling parameters. temperature/top_p/top_k are rejected outright by
+   *   the current Opus and Sonnet models, so sending them fails the request.
+   * - Errors are not re-wrapped, so callers can still read error.status and
+   *   distinguish an invalid key from a rate limit.
+   *
+   * Thinking is left at the model default (adaptive on Opus 5); depth is
+   * controlled with effort instead of a token budget.
+   */
+  static async createChatStream(request: {
+    messages: AnthropicMessage[];
+    system?: string;
+    model?: string;
+    maxTokens?: number;
+    effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+  }): Promise<AsyncIterable<any>> {
+    const client = getAnthropicClient();
+
+    const stream = await client.messages.create({
+      model: request.model || anthropicConfig.chat.model,
+      max_tokens: request.maxTokens || anthropicConfig.chat.maxTokens,
+      system: request.system,
+      messages: request.messages as any,
+      output_config: { effort: request.effort || anthropicConfig.chat.effort },
+      stream: true,
+    } as any);
+
+    return stream as unknown as AsyncIterable<any>;
+  }
+
   /**
    * Analyze an image with Claude Vision
    */

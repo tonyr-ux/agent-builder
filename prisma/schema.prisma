@@ -30,6 +30,27 @@ model User {
   @@map("users")
 }
 
+model config_agent_session_events {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  session_id     String
+  turn_index     Int      @default(0)
+  action         String   @default("build")
+  model          String?
+  agent_name     String?
+  user_message   String
+  request_json   Json
+  current_config Json?
+  raw_response   String?
+  parsed_json    Json?
+  error          String?
+  duration_ms    Int?
+  user_agent     String?
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([created_at(sort: Desc)], map: "idx_config_agent_session_events_created_at")
+  @@index([session_id, turn_index], map: "idx_config_agent_session_events_session")
+}
+
 model agent_runs {
   id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   agent_code   String     @db.VarChar(100)

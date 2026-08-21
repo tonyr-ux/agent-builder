@@ -46,27 +46,67 @@ export type XelixConfig = {
   items?: string[]
 }
 
-/** Module (sidebar stage) and operator-facing label for each supported output. */
-export const OUTPUT_TYPE_META: Record<XelixOutputType, { stage: string; label: string }> = {
-  "send-emails": { stage: "capture", label: "Send emails" },
-  "assign-users": { stage: "capture", label: "Assign users" },
-  "assign-approvers": { stage: "capture", label: "Assign approvers" },
-  "raise-invoices-as-exceptions": { stage: "capture", label: "Raise as exception" },
-  "perform-workflow-actions": { stage: "capture", label: "Workflow action" },
-  "custom-field-extraction": { stage: "capture", label: "Custom field extraction" },
-  "custom-extraction-instructions": { stage: "capture", label: "Custom extraction instructions" },
-  "custom-classification": { stage: "capture", label: "Custom classification" },
-  "derive-value": { stage: "capture", label: "Derive or calculate a value" },
-  "derive-custom-field-value": { stage: "capture", label: "Derive a custom field value" },
-  "split-or-merge-line-items": { stage: "capture", label: "Split or merge line items" },
-  "helpdesk-trigger": { stage: "helpdesk", label: "Helpdesk trigger" },
-  "generated-reply-instructions": { stage: "helpdesk", label: "Generated reply instructions" },
-  "statement-trigger": { stage: "statements", label: "Statement trigger" },
-  "statement-share-queue": { stage: "statements", label: "Auto-share statements" },
-  "transaction-classification": { stage: "transactions", label: "Classification set" },
-  "vendor-group": { stage: "vendors", label: "Vendor group" },
-  "vendor-flagging-rule": { stage: "vendors", label: "Vendor review flag" },
-  "report-chart": { stage: "reports", label: "Report chart" },
+/** Capability groups an output can belong to. */
+export type XelixCapabilityGroup =
+  | "External connection"
+  | "Processing action"
+  | "Custom extraction"
+  | "Data modification"
+  | "Helpdesk"
+  | "Statements"
+  | "Transactions"
+  | "Vendors"
+  | "Reporting"
+
+type OutputMeta = {
+  /** Sidebar stage / Xelix module */
+  stage: string
+  /** Operator-facing name of the output */
+  label: string
+  group: XelixCapabilityGroup
+  /** AP rules run in a mode; definitions and triggers don't */
+  supportsMode: boolean
+}
+
+/** Module, label, capability group and mode support for each supported output. */
+export const OUTPUT_TYPE_META: Record<XelixOutputType, OutputMeta> = {
+  "send-emails": { stage: "capture", label: "Send emails", group: "External connection", supportsMode: true },
+  "assign-users": { stage: "capture", label: "Assign users", group: "Processing action", supportsMode: true },
+  "assign-approvers": { stage: "capture", label: "Assign approvers", group: "Processing action", supportsMode: true },
+  "raise-invoices-as-exceptions": { stage: "capture", label: "Raise as exception", group: "Processing action", supportsMode: true },
+  "perform-workflow-actions": { stage: "capture", label: "Workflow action", group: "Processing action", supportsMode: true },
+  "custom-field-extraction": { stage: "capture", label: "Custom field extraction", group: "Custom extraction", supportsMode: false },
+  "custom-extraction-instructions": { stage: "capture", label: "Custom extraction instructions", group: "Custom extraction", supportsMode: false },
+  "custom-classification": { stage: "capture", label: "Custom classification", group: "Custom extraction", supportsMode: false },
+  "derive-value": { stage: "capture", label: "Derive or calculate a value", group: "Data modification", supportsMode: false },
+  "derive-custom-field-value": { stage: "capture", label: "Derive a custom field value", group: "Data modification", supportsMode: false },
+  "split-or-merge-line-items": { stage: "capture", label: "Split or merge line items", group: "Data modification", supportsMode: false },
+  "helpdesk-trigger": { stage: "helpdesk", label: "Helpdesk trigger", group: "Helpdesk", supportsMode: false },
+  "generated-reply-instructions": { stage: "helpdesk", label: "Generated reply instructions", group: "Helpdesk", supportsMode: false },
+  "statement-trigger": { stage: "statements", label: "Statement trigger", group: "Statements", supportsMode: false },
+  "statement-share-queue": { stage: "statements", label: "Auto-share statements", group: "Statements", supportsMode: false },
+  "transaction-classification": { stage: "transactions", label: "Classification set", group: "Transactions", supportsMode: false },
+  "vendor-group": { stage: "vendors", label: "Vendor group", group: "Vendors", supportsMode: false },
+  "vendor-flagging-rule": { stage: "vendors", label: "Vendor review flag", group: "Vendors", supportsMode: false },
+  "report-chart": { stage: "reports", label: "Report chart", group: "Reporting", supportsMode: false },
+}
+
+export function outputGroup(outputType: XelixOutputType): XelixCapabilityGroup {
+  return OUTPUT_TYPE_META[outputType]?.group ?? "Processing action"
+}
+
+export function supportsMode(outputType: XelixOutputType): boolean {
+  return OUTPUT_TYPE_META[outputType]?.supportsMode ?? false
+}
+
+/** Which trigger-shaped outputs render as When / Then rather than a checklist. */
+export function isTriggerOutput(outputType: XelixOutputType): boolean {
+  return (
+    outputType === "helpdesk-trigger" ||
+    outputType === "statement-trigger" ||
+    outputType === "statement-share-queue" ||
+    outputType === "vendor-flagging-rule"
+  )
 }
 
 const OUTPUT_TYPES = Object.keys(OUTPUT_TYPE_META) as XelixOutputType[]
@@ -123,9 +163,36 @@ export function extractConfigBlock(response: string): { config: XelixConfig; blo
   return found
 }
 
-/** The reply with the configuration block removed, for the chat bubble. */
+/**
+ * Lines that only exist to introduce the block ("Here is the configuration:").
+ * The operator sees the configuration as a card, not inline, so a line like that is
+ * left pointing at nothing once the block is lifted out.
+ */
+const BLOCK_ANNOUNCEMENT =
+  /^(?:here(?:'s| is| are)?\b.*|(?:the |this )?(?:proposed |updated )?(?:config(?:uration)?|rule|definition|setup)\b.*|below\b.*|see\b.*)[:—-]\s*$/i
+
+/** The reply with the configuration block, and any line announcing it, removed. */
 export function stripConfigBlock(response: string, blockText: string): string {
-  return response.replace(blockText, "").replace(/\n{3,}/g, "\n\n").trim()
+  const at = response.indexOf(blockText)
+  const before = (at === -1 ? response : response.slice(0, at)).split("\n")
+  const after = at === -1 ? "" : response.slice(at + blockText.length)
+
+  // Trim the lines that ran up to the block, while they're short enough to be a
+  // lead-in rather than content
+  while (before.length) {
+    const last = before[before.length - 1].trim()
+    if (!last) {
+      before.pop()
+      continue
+    }
+    if (last.length <= 80 && BLOCK_ANNOUNCEMENT.test(last)) {
+      before.pop()
+      continue
+    }
+    break
+  }
+
+  return [before.join("\n").trim(), after.trim()].filter(Boolean).join("\n\n").replace(/\n{3,}/g, "\n\n").trim()
 }
 
 /** What gets stored on the agent — the block itself, normalised. */
